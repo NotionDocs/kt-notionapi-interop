@@ -1,4 +1,4 @@
-package schemas.filter
+package schemas.inputs
 
 interface Filter {
     val property: String

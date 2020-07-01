@@ -7,7 +7,8 @@ import io.ktor.http.contentType
 import kotlinx.serialization.json.*
 import kotlinx.serialization.serializer
 import models.page.PageData
-import schemas.filter.Filter
+import schemas.inputs.Filter
+import schemas.inputs.Sort
 import util.dashifyId
 import util.json
 import java.lang.Integer.min
@@ -46,16 +47,28 @@ class NotionAPI(private val token: String) {
 
         val page = PageData(message)
 
-        return page.toJson()
+        return json {
+            "id" to pageId
+            page.toJson().content.entries.forEach {
+                it.key to it.value
+            }
+        }
     }
 
     suspend fun fetchCollection(
         collectionId: String,
         collectionViewId: String,
-        filter: Filter? = null,
-        cursor: String? = null,
-        limit: Int? = null
+        filters: List<Filter>?,
+        sort: Sort?,
+        cursor: String?,
+        limit: Int?
     ): JsonObject {
+        println(json {
+            "pageId" to dashifyId(collectionId)
+            "limit" to Int.MAX_VALUE
+            "chunkNumber" to 0
+            "verticalColumns" to false
+        })
         val key: String?
         val pageChunk: JsonObject
         try {
@@ -78,22 +91,31 @@ class NotionAPI(private val token: String) {
             }
         }
 
+        println("gotcha")
+
         val metadata = PageData.getMetadata(pageChunk)
 
-        var filterObject: JsonObject? = null
-        if (filter != null) {
-
+        val filtersList: MutableList<JsonObject> = mutableListOf()
+        filters?.forEach { filter ->
             val property = metadata["properties"]?.jsonObject?.entries?.find {
                 it.value.jsonObject["name"]?.content == filter.property
             }?.key
 
-            filterObject = json {
+            filtersList += json {
                 "property" to property
                 "filter" to json {
                     "operator" to filter.operator
                     "value" to json {
                         "type" to "exact"
-                        "value" to filter.value
+                        when (filter.value) {
+                            "true", "false" -> filter.value?.toBoolean()?.let { "value" to JsonLiteral(it) }
+                            else -> filter.value?.let {
+                                "value" to JsonLiteral(
+                                    if (filter.operator == "relation_contains") dashifyId(it)
+                                    else it
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -110,13 +132,20 @@ class NotionAPI(private val token: String) {
                         "limit" to Int.MAX_VALUE
                         "loadContentCover" to true
                     }
-                    if (filterObject != null) {
-                        "query" to json {
+                    "query" to json {
+                        if (filtersList.size > 0) {
                             "filter" to json {
                                 "operator" to "and"
                                 "filters" to jsonArray {
-                                    +filterObject
+                                    filtersList.forEach { +it }
                                 }
+                            }
+                        }
+                        if (sort != null) {
+                            println("hehe sort")
+                            "sort" to json {
+                                "property" to sort.property
+                                "value" to sort.value
                             }
                         }
                     }

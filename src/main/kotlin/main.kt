@@ -9,15 +9,17 @@ import io.ktor.routing.post
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonLiteral
 import kotlinx.serialization.json.JsonObject
-import schemas.filter.Filter
+import kotlinx.serialization.json.content
+import schemas.inputs.Filter
+import schemas.inputs.Sort
 import util.get
 import util.json
 
 suspend fun main() {
-
-    val server = embeddedServer(
+    embeddedServer(
         Netty, port = 8081,
         module = Application::module,
         watchPaths = listOf("NotionAPI")
@@ -41,7 +43,6 @@ fun Application.module() {
             try {
                 message = api.fetchPage(pageId)
             } catch (e: Throwable) {
-                throw (e)
                 return@post call.response.status(
                     when (e) {
                         is NotionAPIException -> HttpStatusCode.ServiceUnavailable
@@ -53,35 +54,60 @@ fun Application.module() {
         }
 
         post("/fetchCollection") {
+            println("heyyy")
             val req = json.parseJson(call.receiveText())
 
-            if (!req.contains("collectionId") || !req.contains("collectionViewId") || !call.request.headers.contains("Token"))
+            if (!req.contains("collectionId") || !req.contains("collectionViewId") || !call.request.headers.contains("Token")) {
                 return@post call.response.status(HttpStatusCode.BadRequest)
+            }
 
             val collectionId = (req["collectionId"] as JsonLiteral).content
             val collectionViewId = (req["collectionViewId"] as JsonLiteral).content
             val token = call.request.headers["Token"] as String
             val api = NotionAPI(token)
-            var filter: Filter? = null
 
-            if (req.contains("filter")) {
-                val filterReq = (req["filter"] as JsonObject).content
-                if (!filterReq.containsKey("property") || !filterReq.containsKey("operator"))
-                    return@post call.response.status(HttpStatusCode.BadRequest)
-                filter = object : Filter {
-                    override val property = (filterReq["property"] as JsonLiteral).content
-                    override val operator = (filterReq["operator"] as JsonLiteral).content
-                    override val value = (filterReq["value"] as JsonLiteral?)?.content
+            val filters: MutableList<Filter> = mutableListOf()
+            if (req.contains("filters")) {
+                val filterArray = (req["filters"] as JsonArray).content
+                filterArray.forEach {
+                    it as JsonObject
+                    if (!it.containsKey("property") || !it.containsKey("operator"))
+                        return@post call.response.status(HttpStatusCode.BadRequest)
+                    filters += object : Filter {
+                        override val property = (it["property"] as JsonLiteral).content
+                        override val operator = (it["operator"] as JsonLiteral).content
+                        override val value = (it["value"] as JsonLiteral?)?.content
+                    }
                 }
             }
 
+            val sort: Sort? = if (req.contains("sort")) {
+                val sortReq = (req["sort"] as JsonObject).content
+                if (!sortReq.containsKey("property") || !sortReq.containsKey("value"))
+                    return@post call.response.status(HttpStatusCode.BadRequest)
+                object : Sort {
+                    override val property = sortReq["property"]!!.content
+                    override val value = sortReq["value"]!!.content
+                }
+            } else null
+
             val message: JsonObject
             try {
-                message = api.fetchCollection(collectionId, collectionViewId, filter)
+                message = api.fetchCollection(
+                    collectionId,
+                    collectionViewId,
+                    filters,
+                    sort,
+                    (req["cursor"] as JsonLiteral?)?.content,
+                    (req["limit"] as JsonLiteral?)?.content?.toInt()
+                )
             } catch (e: Throwable) {
                 return@post call.response.status(
                     when (e) {
-                        is NotionAPIException -> HttpStatusCode.ServiceUnavailable
+                        is NotionAPIException -> {
+                            println(e)
+                            HttpStatusCode.ServiceUnavailable
+                        }
                         else -> HttpStatusCode.InternalServerError
                     }
                 )

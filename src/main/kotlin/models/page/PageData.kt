@@ -71,7 +71,7 @@ class PageData(val message: JsonObject) {
                 }
                 "createdTime" to createdTime
                 "lastEditedTime" to lastEditedTime
-                format?.let { it.entries.forEach { it.key to it.value } }
+                "format" to json { format?.let { it.entries.forEach { it.key to it.value } } }
             }
         }
 
