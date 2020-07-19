@@ -1,0 +1,32 @@
+{
+  "collectionId": "1866f819-3be8-4aba-8bd5-4270ea9c9e81",
+  "collectionViewId": "69765dcc-bf4e-41d8-a592-96327c118fff",
+  "loader": {
+    "type": "table",
+    "limit": 2147483647,
+    "loadContentCover": true
+  },
+  "query": {
+    "filter": {
+      "operator": "and",
+      "filters": [
+        {
+          "property": "r{{(",
+          "filter": {
+            "operator": "enum_is",
+            "value": {
+              "type": "exact",
+              "value": "Published"
+            }
+          }
+        }
+      ]
+    },
+    "sort": [
+      {
+        "property": "Publish date",
+        "direction": "descending"
+      }
+    ]
+  }
+}

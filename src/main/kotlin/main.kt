@@ -54,12 +54,16 @@ fun Application.module() {
         }
 
         post("/fetchCollection") {
-            println("heyyy")
             val req = json.parseJson(call.receiveText())
 
-            if (!req.contains("collectionId") || !req.contains("collectionViewId") || !call.request.headers.contains("Token")) {
+            println(
+                !req.contains("collectionId") || !req.contains("collectionViewId") || !call.request.headers.contains(
+                    "token"
+                )
+            )
+
+            if (!req.contains("collectionId") || !req.contains("collectionViewId") || !call.request.headers.contains("token"))
                 return@post call.response.status(HttpStatusCode.BadRequest)
-            }
 
             val collectionId = (req["collectionId"] as JsonLiteral).content
             val collectionViewId = (req["collectionViewId"] as JsonLiteral).content
@@ -83,11 +87,11 @@ fun Application.module() {
 
             val sort: Sort? = if (req.contains("sort")) {
                 val sortReq = (req["sort"] as JsonObject).content
-                if (!sortReq.containsKey("property") || !sortReq.containsKey("value"))
+                if (!sortReq.containsKey("property") || !sortReq.containsKey("direction"))
                     return@post call.response.status(HttpStatusCode.BadRequest)
                 object : Sort {
                     override val property = sortReq["property"]!!.content
-                    override val value = sortReq["value"]!!.content
+                    override val direction = sortReq["direction"]!!.content
                 }
             } else null
 

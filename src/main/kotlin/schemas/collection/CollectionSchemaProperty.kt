@@ -7,19 +7,18 @@ import kotlinx.serialization.json.content
 
 @Serializable
 data class CollectionSchemaProperty(
-    val name: String,
+    val key: String,
     val type: String,
     @ContextualSerialization
     val options: Any?
 ) {
 
     companion object {
-        val from = { map: JsonObject ->
-            val name by map
+        val from = { key: String, map: JsonObject ->
             val type by map
             val options = map["options"]
             CollectionSchemaProperty(
-                name.content, type.content, options
+                key, type.content, options
             )
         }
     }

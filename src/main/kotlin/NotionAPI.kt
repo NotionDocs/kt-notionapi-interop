@@ -63,12 +63,6 @@ class NotionAPI(private val token: String) {
         cursor: String?,
         limit: Int?
     ): JsonObject {
-        println(json {
-            "pageId" to dashifyId(collectionId)
-            "limit" to Int.MAX_VALUE
-            "chunkNumber" to 0
-            "verticalColumns" to false
-        })
         val key: String?
         val pageChunk: JsonObject
         try {
@@ -91,15 +85,11 @@ class NotionAPI(private val token: String) {
             }
         }
 
-        println("gotcha")
-
         val metadata = PageData.getMetadata(pageChunk)
 
         val filtersList: MutableList<JsonObject> = mutableListOf()
         filters?.forEach { filter ->
-            val property = metadata["properties"]?.jsonObject?.entries?.find {
-                it.value.jsonObject["name"]?.content == filter.property
-            }?.key
+            val property = metadata["properties"]?.jsonObject?.get(filter.property)?.jsonObject?.get("key")?.content
 
             filtersList += json {
                 "property" to property
@@ -143,9 +133,13 @@ class NotionAPI(private val token: String) {
                         }
                         if (sort != null) {
                             println("hehe sort")
-                            "sort" to json {
-                                "property" to sort.property
-                                "value" to sort.value
+                            "sort" to jsonArray {
+                                +json {
+                                    "property" to metadata["properties"]?.jsonObject?.get(sort.property)?.jsonObject?.get(
+                                        "key"
+                                    )?.content
+                                    "direction" to sort.direction
+                                }
                             }
                         }
                     }

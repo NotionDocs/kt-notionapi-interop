@@ -22,7 +22,7 @@ class PageData(val message: JsonObject) {
                         message["recordMap"]["collection"].toMap<JsonObject>().entries.first()
                             .value["value"]["schema"].toMap<JsonObject>()
                     collectionSchema.entries.forEach {
-                        properties[it.key] = CollectionSchemaProperty.from(it.value)
+                        properties[it.value["name"]!!.content] = CollectionSchemaProperty.from(it.key, it.value)
                     }
                     properties
                 } catch (e: Throwable) {
