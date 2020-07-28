@@ -1,4 +1,3 @@
-import exceptions.NotionAPIException
 import io.ktor.client.HttpClient
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -38,8 +37,8 @@ class NotionAPI(private val token: String) {
             ) as JsonObject
         } catch (e: Throwable) {
             when (e) {
-                is io.ktor.client.features.ClientRequestException -> throw NotionAPIException(
-                    RequestStage.LOAD_PAGE_CHUNK, e
+                is io.ktor.client.features.ClientRequestException -> throw NotionServerException(
+                    NotionServerRequestStage.LOAD_PAGE_CHUNK, e
                 )
                 else -> throw e
             }
@@ -78,8 +77,8 @@ class NotionAPI(private val token: String) {
             if (key == null) throw Exception()
         } catch (e: Throwable) {
             when (e) {
-                is io.ktor.client.features.ClientRequestException -> throw NotionAPIException(
-                    RequestStage.LOAD_PAGE_CHUNK, e
+                is io.ktor.client.features.ClientRequestException -> throw NotionServerException(
+                    NotionServerRequestStage.LOAD_PAGE_CHUNK, e
                 )
                 else -> throw e
             }
@@ -147,8 +146,8 @@ class NotionAPI(private val token: String) {
             ) as JsonObject
         } catch (e: Throwable) {
             when (e) {
-                is io.ktor.client.features.ClientRequestException -> throw NotionAPIException(
-                    RequestStage.QUERY_COLLECTION, e
+                is io.ktor.client.features.ClientRequestException -> throw NotionServerException(
+                    NotionServerRequestStage.QUERY_COLLECTION, e
                 )
                 else -> throw e
             }

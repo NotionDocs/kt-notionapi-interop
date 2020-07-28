@@ -2,8 +2,6 @@ package util
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonConfiguration
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.serializer
 
 val json = Json(JsonConfiguration.Stable)
 
@@ -21,8 +19,4 @@ fun <T> Any?.toMap(): Map<String, T> {
 
 fun <T> Any?.toList(): List<T> {
     return this as List<T>
-}
-
-val jsonStringify = { data: JsonObject ->
-    json.stringify(JsonObject::class.serializer(), data)
 }

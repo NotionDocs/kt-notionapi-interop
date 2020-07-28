@@ -1,7 +1,7 @@
 package util
 
-val DASH_ID_LENGTH_VALID = 36
-val DASH_ID_CLEAN_LENGTH_VALID = 32
+const val DASH_ID_LENGTH_VALID = 36
+const val DASH_ID_CLEAN_LENGTH_VALID = 32
 
 val dashifyId = dashifyId@{ id: String ->
     if (isValidId(id)) return@dashifyId id

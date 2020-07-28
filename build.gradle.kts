@@ -1,12 +1,19 @@
 val ktor_version = "1.3.2"
 
 plugins {
+    application
+
     kotlin("jvm") version "1.3.72"
     kotlin("plugin.serialization") version "1.3.72"
+
+    id("com.github.johnrengelman.shadow") version "5.0.0"
 }
 
-group = "org.example"
-version = "1.0-SNAPSHOT"
+sourceSets["main"].resources.srcDir("resources")
+
+application {
+    mainClassName = "io.ktor.server.netty.EngineMain"
+}
 
 repositories {
     jcenter()
@@ -28,6 +35,16 @@ tasks {
         kotlinOptions {
             jvmTarget = "1.8"
             freeCompilerArgs += "-Xuse-experimental=kotlinx.serialization.ImplicitReflectionSerializer"
+        }
+    }
+
+    withType<Jar> {
+        manifest {
+            attributes(
+                mapOf(
+                    "Main-Class" to application.mainClassName
+                )
+            )
         }
     }
 }

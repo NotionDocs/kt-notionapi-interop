@@ -1,16 +1,22 @@
 package models.page
 
 import kotlinx.serialization.json.*
-import models.block.*
+import models.block.Block
+import models.block.BlockType
+import models.block.PageBlock
+import models.block.content.SectionBlockContent
+import models.block.content.TextBlockContent
+import models.block.content.TextItemsBlockContent
+import models.block.content.TodoBlockContent
 import schemas.block.BlockValue
 import schemas.collection.CollectionSchemaProperty
 import util.get
 import util.toMap
 
-class PageData(val message: JsonObject) {
-    val metadata: JsonObject
-    var title: String
-    var properties: JsonObject
+class PageData(message: JsonObject) {
+    private val metadata: JsonObject
+    private var title: String
+    private var properties: JsonObject
     var content: JsonArray
 
     companion object {
@@ -71,7 +77,7 @@ class PageData(val message: JsonObject) {
                 }
                 "createdTime" to createdTime
                 "lastEditedTime" to lastEditedTime
-                "format" to json { format?.let { it.entries.forEach { it.key to it.value } } }
+                "format" to json { format?.let { format -> format.entries.forEach { it.key to it.value } } }
             }
         }
 
@@ -83,8 +89,8 @@ class PageData(val message: JsonObject) {
             val blocks: MutableList<Pair<String, Block>> = mutableListOf()
 
             try {
-                message["recordMap"]["block"].toMap<JsonObject>().entries.forEach {
-                    val block = it.value["value"].toMap<Any>()
+                message["recordMap"]["block"].toMap<JsonObject>().entries.forEach { recordMapBlock ->
+                    val block = recordMapBlock.value["value"].toMap<Any>()
                     val blockValue = BlockValue.from(block)
 
                     when (blockValue.type) {
@@ -96,54 +102,72 @@ class PageData(val message: JsonObject) {
                             }
                         }
                         "column_list" -> {
-                            blocks += it.key to RowBlock(blockValue.content as JsonArray)
+                            blocks += recordMapBlock.key to Block(
+                                type = BlockType.ROW,
+                                content = SectionBlockContent(blockValue.content as JsonArray)
+                            )
                         }
                         "column" -> {
-                            blocks += it.key to ColumnBlock(blockValue.content as JsonArray)
+                            blocks += recordMapBlock.key to Block(
+                                type = BlockType.COLUMN,
+                                content = SectionBlockContent(blockValue.content as JsonArray)
+                            )
                         }
                         "header", "sub_header", "sub_sub_header", "text" -> {
-                            blocks += it.key to TextBlock(
-                                when (blockValue.type) {
-                                    "header" -> 1
-                                    "sub_header" -> 2
-                                    "sub_sub_header" -> 3
-                                    else -> 4
-                                },
-                                blockValue.properties?.let { it["title"] as JsonArray }
-                                    ?: JsonArray(listOf()))
+                            blocks += recordMapBlock.key to Block(
+                                type = BlockType.TEXT,
+                                content = TextBlockContent(
+                                    when (blockValue.type) {
+                                        "header" -> 1
+                                        "sub_header" -> 2
+                                        "sub_sub_header" -> 3
+                                        else -> 4
+                                    },
+                                    blockValue.properties?.let { it["title"] as JsonArray }
+                                        ?: JsonArray(listOf()))
+                            )
                         }
                         "to_do" -> {
-                            blocks += it.key to TodoBlock(
-                                (blockValue.properties["checked"])?.let { (it[0][0] as JsonLiteral).content == "Yes" }
-                                    ?: false,
-                                blockValue.properties?.let { it["title"] as JsonArray }
-                                    ?: JsonArray(listOf())
-                            )
+                            blocks += recordMapBlock.key to Block(
+                                type = BlockType.TODO,
+                                content = TodoBlockContent(
+                                    (blockValue.properties["checked"])?.let { (it[0][0] as JsonLiteral).content == "Yes" }
+                                        ?: false,
+                                    blockValue.properties?.let { it["title"] as JsonArray }
+                                        ?: JsonArray(listOf())
+                                ))
                         }
                         "numbered_list" -> {
-                            blocks += it.key to NumberedBlock(
-                                blockValue.properties?.let { it["title"] as JsonArray }
-                                    ?: JsonArray(listOf())
-                            )
+                            blocks += recordMapBlock.key to Block(
+                                type = BlockType.NUMBERED,
+                                content = TextItemsBlockContent(
+                                    blockValue.properties?.let { it["title"] as JsonArray }
+                                        ?: JsonArray(listOf())
+                                ))
                         }
                         "bulleted_list" -> {
-                            blocks += it.key to BulletedBlock(
-                                blockValue.properties?.let { it["title"] as JsonArray }
-                                    ?: JsonArray(listOf())
-                            )
+                            blocks += recordMapBlock.key to Block(
+                                type = BlockType.BULLETED,
+                                content = TextItemsBlockContent(
+                                    blockValue.properties?.let { it["title"] as JsonArray }
+                                        ?: JsonArray(listOf())
+                                ))
                         }
                         "quote" -> {
-                            blocks += it.key to QuoteBlock(
-                                blockValue.properties?.let { it["title"] as JsonArray }
-                                    ?: JsonArray(listOf())
-                            )
+                            blocks += recordMapBlock.key to Block(
+                                type = BlockType.QUOTE,
+                                content = TextItemsBlockContent(
+                                    blockValue.properties?.let { it["title"] as JsonArray }
+                                        ?: JsonArray(listOf())
+                                ))
                         }
                         "callout" -> {
-                            blocks += it.key to CalloutBlock(
-                                blockValue.format ?: JsonObject(mapOf()),
-                                blockValue.properties?.let { it["title"] as JsonArray }
-                                    ?: JsonArray(listOf())
-                            )
+                            blocks += recordMapBlock.key to Block(
+                                type = BlockType.CALLOUT,
+                                content = TextItemsBlockContent(
+                                    blockValue.properties?.let { it["title"] as JsonArray }
+                                        ?: JsonArray(listOf())
+                                ))
                         }
                         //else -> println(blockValue.type)
                     }

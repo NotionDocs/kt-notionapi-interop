@@ -1,4 +1,3 @@
-import exceptions.NotionAPIException
 import io.ktor.application.Application
 import io.ktor.application.call
 import io.ktor.http.ContentType
@@ -18,7 +17,7 @@ import schemas.inputs.Sort
 import util.get
 import util.json
 
-suspend fun main() {
+fun main() {
     embeddedServer(
         Netty, port = 8081,
         module = Application::module,
@@ -45,7 +44,7 @@ fun Application.module() {
             } catch (e: Throwable) {
                 return@post call.response.status(
                     when (e) {
-                        is NotionAPIException -> HttpStatusCode.ServiceUnavailable
+                        is NotionServerException -> HttpStatusCode.ServiceUnavailable
                         else -> HttpStatusCode.InternalServerError
                     }
                 )
@@ -90,8 +89,8 @@ fun Application.module() {
                 if (!sortReq.containsKey("property") || !sortReq.containsKey("direction"))
                     return@post call.response.status(HttpStatusCode.BadRequest)
                 object : Sort {
-                    override val property = sortReq["property"]!!.content
-                    override val direction = sortReq["direction"]!!.content
+                    override val property = (sortReq["property"] ?: error("")).content
+                    override val direction = (sortReq["direction"] ?: error("")).content
                 }
             } else null
 
@@ -108,7 +107,7 @@ fun Application.module() {
             } catch (e: Throwable) {
                 return@post call.response.status(
                     when (e) {
-                        is NotionAPIException -> {
+                        is NotionServerException -> {
                             println(e)
                             HttpStatusCode.ServiceUnavailable
                         }
